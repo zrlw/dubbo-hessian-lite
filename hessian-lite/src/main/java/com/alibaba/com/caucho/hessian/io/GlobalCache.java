@@ -21,6 +21,12 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class GlobalCache {
     private static final CacheItem[] CACHE_ITEMS = new CacheItem[16];
 
+    /**
+     * Whether to use GlobalCache, default false.
+     * use -Dcom.caucho.hessian.io.globalCacheMode=true to enable global cache.
+     */
+    private static boolean globalCacheMode = Boolean.getBoolean("com.caucho.hessian.io.globalCacheMode");
+
     static {
         for (int i = 0; i < CACHE_ITEMS.length; i++) {
             CACHE_ITEMS[i] = new CacheItem();
@@ -36,12 +42,25 @@ public class GlobalCache {
     }
 
     public static byte[] getBytes() {
+        if (!globalCacheMode) {
+            return null;
+        }
         CacheItem cacheItem = CACHE_ITEMS[System.identityHashCode(Thread.currentThread()) & (CACHE_ITEMS.length - 1)];
         return BYTES_UPDATER.getAndSet(cacheItem, null);
     }
 
     public static void putBytes(byte[] bytes) {
+        if (!globalCacheMode) {
+            return;
+        }
         CacheItem cacheItem = CACHE_ITEMS[System.identityHashCode(Thread.currentThread()) & (CACHE_ITEMS.length - 1)];
         BYTES_UPDATER.set(cacheItem, bytes);
+    }
+
+    /**
+     * For compatibility test.
+     */
+    protected static void setGlobalCacheMode(boolean globalCacheMode) {
+        GlobalCache.globalCacheMode = globalCacheMode;
     }
 }
